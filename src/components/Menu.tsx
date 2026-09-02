@@ -4,172 +4,152 @@ import { useInView } from "framer-motion";
 import { categories, menuItems, type MenuItem } from "@/data/menu";
 import { characters } from "@/data/characters";
 
-// Premium food placeholder — dark themed gradient with category icon
-function FoodPlaceholder({ name, color }: { name: string; color?: string }) {
-  const initials = name
-    .split(" ")
-    .slice(0, 2)
-    .map((w) => w[0])
-    .join("");
-  return (
-    <div
-      className="flex h-full w-full items-center justify-center"
-      style={{
-        background: `radial-gradient(ellipse at 40% 40%, ${color ?? "rgba(137,97,217,0.15)"} 0%, rgba(26,20,16,0.6) 70%)`,
-      }}
-    >
-      <span
-        className="jp select-none font-display text-3xl font-medium opacity-30"
-        style={{ color: color ?? "var(--color-wisteria)" }}
-      >
-        {initials}
-      </span>
-    </div>
-  );
-}
-
+/* ─── Compact horizontal menu card — image RIGHT ─────────────────── */
 function MenuCard({ item, index }: { item: MenuItem; index: number }) {
   const character = item.characterId
     ? characters.find((c) => c.id === item.characterId)
     : null;
   const [hovered, setHovered] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
-  const inView = useInView(ref, { once: true, margin: "-40px" });
+  const inView = useInView(ref, { once: true, margin: "-30px" });
+
+  const accent = character?.themeColor ?? (item.isSignature ? "var(--color-lantern)" : "var(--color-line)");
 
   return (
     <div
       ref={ref}
-      onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => setHovered(false)}
       style={{
-        opacity: inView ? 1 : 0,
-        transform: inView ? "translateY(0)" : "translateY(28px)",
-        transition: `opacity 0.6s ease ${index * 0.06}s, transform 0.6s ease ${index * 0.06}s`,
+        opacity:    inView ? 1 : 0,
+        transform:  inView ? "translateY(0)" : "translateY(18px)",
+        transition: `opacity 0.5s ease ${Math.min(index * 0.045, 0.4)}s,
+                     transform 0.5s ease ${Math.min(index * 0.045, 0.4)}s`,
       }}
     >
       <div
-        className={`
-          group relative flex flex-col overflow-hidden rounded-[1.1rem] border
-          bg-surface transition-all duration-500 hover:-translate-y-1.5
-          ${hovered && character ? "" : "border-line"}
-        `}
-        style={
-          hovered && character
-            ? {
-                borderColor: `${character.themeColor}40`,
-                boxShadow: `0 0 0 1px ${character.themeColor}20, 0 20px 48px -16px ${character.themeColor}30`,
-              }
-            : { boxShadow: "0 2px 12px -4px rgba(0,0,0,0.4)" }
-        }
+        onMouseEnter={() => setHovered(true)}
+        onMouseLeave={() => setHovered(false)}
+        className="group relative flex h-[4.5rem] items-center overflow-hidden rounded-[0.85rem] border bg-surface transition-all duration-300"
+        style={{
+          borderColor: hovered ? `${accent}45` : "var(--color-line)",
+          boxShadow:   hovered ? `0 0 0 1px ${accent}18, 0 8px 24px -8px ${accent}20` : "none",
+        }}
       >
-        {/* Top accent bar */}
+        {/* Left accent bar */}
         <div
-          className="absolute inset-x-0 top-0 z-10 h-[2px] transition-all duration-500"
-          style={{
-            background: character
-              ? `linear-gradient(90deg, transparent 0%, ${character.themeColor}${hovered ? "cc" : "55"} 50%, transparent 100%)`
-              : `linear-gradient(90deg, transparent 0%, var(--color-lantern)${hovered ? "60" : "20"} 50%, transparent 100%)`,
-          }}
+          className="absolute inset-y-0 left-0 w-[2px] transition-all duration-300"
+          style={{ background: hovered ? accent : "transparent" }}
         />
 
-        {/* Image area */}
-        <div className="relative h-44 w-full overflow-hidden bg-void/80">
-          <FoodPlaceholder
-            name={item.name}
-            color={character?.themeColor ?? (item.isSignature ? "rgba(212,147,90,0.25)" : undefined)}
-          />
-          {/* Gradient fade bottom */}
-          <div className="absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-surface to-transparent" />
-
-          {/* Signature badge */}
-          {item.isSignature && (
-            <div className="absolute left-3 top-3">
-              <span className="flex items-center gap-1.5 rounded-full border border-lantern/40 bg-void/70 px-2.5 py-1 text-[0.58rem] uppercase tracking-[0.2em] text-lantern backdrop-blur-sm">
-                <span className="inline-block h-1 w-1 rounded-full bg-lantern" />
-                Signature
-              </span>
+        {/* Text block */}
+        <div className="flex flex-1 flex-col justify-center gap-0.5 pl-4 pr-3 min-w-0">
+          {/* Character or signature tag */}
+          {(character || item.isSignature) && (
+            <div className="flex items-center gap-1.5">
+              {character && (
+                <>
+                  <span
+                    className="inline-block h-1 w-1 shrink-0 rounded-full"
+                    style={{ background: accent }}
+                  />
+                  <span
+                    className="jp truncate text-[0.55rem] tracking-[0.18em]"
+                    style={{ color: accent, opacity: 0.9 }}
+                  >
+                    {character.japaneseTitle}
+                  </span>
+                  <span className="text-[0.52rem] uppercase tracking-widest text-ink-faint truncate">
+                    {character.element}
+                  </span>
+                </>
+              )}
+              {!character && item.isSignature && (
+                <span className="text-[0.52rem] uppercase tracking-[0.18em] text-lantern">
+                  Signature
+                </span>
+              )}
             </div>
           )}
 
-          {/* Character avatar area */}
-          {character && (
-            <div
-              className="absolute right-3 top-3 flex items-center gap-1.5 rounded-full border px-2.5 py-1 backdrop-blur-sm transition-all duration-300"
-              style={{
-                borderColor: `${character.themeColor}50`,
-                background: `${character.themeColor}15`,
-                opacity: hovered ? 1 : 0.75,
-              }}
-            >
-              <span
-                className="inline-block h-1.5 w-1.5 rounded-full"
-                style={{ background: character.themeColor, boxShadow: `0 0 5px ${character.themeColor}` }}
-              />
-              <span className="jp text-[0.58rem] tracking-widest" style={{ color: character.themeColor }}>
-                {character.japaneseTitle}
-              </span>
-            </div>
-          )}
-        </div>
-
-        {/* Content */}
-        <div className="flex flex-1 flex-col p-5">
-          {/* Character info */}
-          {character && (
-            <p className="mb-2 text-[0.62rem] uppercase tracking-[0.18em] text-ink-faint">
-              {character.element} Breathing · {character.name}
-            </p>
-          )}
-
-          {/* Name */}
-          <h3 className="font-display text-[1.05rem] font-medium leading-tight text-ink transition-colors duration-300 group-hover:text-white">
+          {/* Dish name */}
+          <h3
+            className="truncate font-display text-[0.9rem] font-medium leading-tight transition-colors duration-300"
+            style={{ color: hovered ? "var(--color-ink)" : "var(--color-ink-soft)" }}
+          >
             {item.name}
           </h3>
+        </div>
 
-          {/* Price row */}
-          <div className="mt-auto flex items-end justify-between pt-4">
-            <span
-              className="font-display text-[1.4rem] leading-none tracking-tight transition-all duration-300"
-              style={{
-                color: hovered
-                  ? (character?.themeColor ?? "var(--color-lantern)")
-                  : "var(--color-lantern)",
-                textShadow: hovered && character ? `0 0 20px ${character.themeColor}80` : "none",
-              }}
-            >
-              Rs {item.price.toLocaleString()}
-            </span>
+        {/* Price */}
+        <div className="shrink-0 px-3 text-right">
+          <span
+            className="font-display text-base font-medium leading-none transition-all duration-300"
+            style={{
+              color:      hovered ? accent : "var(--color-lantern)",
+              textShadow: hovered ? `0 0 16px ${accent}80` : "none",
+            }}
+          >
+            Rs {item.price.toLocaleString()}
+          </span>
+        </div>
 
-            {/* Arrow */}
-            <span
-              className="flex h-8 w-8 items-center justify-center rounded-full border transition-all duration-300"
+        {/* Image square — RIGHT */}
+        <div
+          className="relative h-full w-[4.5rem] shrink-0 overflow-hidden"
+          style={{
+            background: `radial-gradient(ellipse at 60% 40%, ${character?.themeColor ?? "rgba(212,147,90,0.18)"} 0%, rgba(11,9,6,0.7) 80%)`,
+          }}
+        >
+          {/* Initials watermark */}
+          <span
+            aria-hidden="true"
+            className="jp absolute inset-0 flex select-none items-center justify-center font-display text-2xl font-bold transition-all duration-300"
+            style={{
+              color:   accent,
+              opacity: hovered ? 0.22 : 0.1,
+              transform: hovered ? "scale(1.1)" : "scale(1)",
+            }}
+          >
+            {item.name.slice(0, 1)}
+          </span>
+
+          {/* Signature ribbon */}
+          {item.isSignature && (
+            <div
+              className="absolute right-0 top-0 h-1 w-full"
+              style={{ background: `linear-gradient(90deg, transparent, ${accent})` }}
+            />
+          )}
+
+          {/* Hover shine sweep */}
+          {hovered && (
+            <div
+              className="pointer-events-none absolute inset-0"
               style={{
-                borderColor: hovered ? (character?.themeColor ?? "var(--color-wisteria)") + "50" : "var(--color-line)",
-                color: hovered ? (character?.themeColor ?? "var(--color-wisteria)") : "var(--color-ink-faint)",
+                background: `linear-gradient(110deg, transparent 30%, ${accent}12 50%, transparent 70%)`,
               }}
-            >
-              →
-            </span>
-          </div>
+            />
+          )}
         </div>
       </div>
     </div>
   );
 }
 
-function SkeletonCard() {
+/* ─── Skeleton row ─────────────────────────────────────────────────── */
+function SkeletonRow() {
   return (
-    <div className="rounded-[1.1rem] border border-line bg-surface overflow-hidden">
-      <div className="skeleton h-44 w-full" />
-      <div className="p-5">
-        <div className="skeleton mb-3 h-3 w-24 rounded" />
-        <div className="skeleton h-5 w-40 rounded" />
-        <div className="skeleton mt-5 h-6 w-20 rounded" />
+    <div className="flex h-[4.5rem] items-center gap-3 overflow-hidden rounded-[0.85rem] border border-line bg-surface">
+      <div className="flex-1 space-y-2 px-4">
+        <div className="skeleton h-2.5 w-16 rounded" />
+        <div className="skeleton h-4 w-36 rounded" />
       </div>
+      <div className="skeleton mr-3 h-5 w-16 rounded" />
+      <div className="skeleton h-full w-[4.5rem]" />
     </div>
   );
 }
 
+/* ─── Menu section ─────────────────────────────────────────────────── */
 export default function Menu() {
   const [activeCategory, setActiveCategory] = useState(categories[0].id);
   const sectionRef = useRef<HTMLDivElement>(null);
@@ -177,9 +157,7 @@ export default function Menu() {
 
   const filtered = menuItems.filter((item) => item.category === activeCategory);
 
-  const scrollTabIntoView = useCallback((id: string) => {
-    setActiveCategory(id);
-  }, []);
+  const handleTab = useCallback((id: string) => setActiveCategory(id), []);
 
   return (
     <section
@@ -188,19 +166,22 @@ export default function Menu() {
       className="relative border-t border-line bg-void"
       aria-label="Menu"
     >
-      {/* Subtle top glow */}
+      {/* Top wisteria rule */}
       <div
         aria-hidden="true"
         className="pointer-events-none absolute inset-x-0 top-0 h-px"
-        style={{ background: "linear-gradient(90deg, transparent, rgba(137,97,217,0.4), transparent)" }}
+        style={{
+          background:
+            "linear-gradient(90deg, transparent, rgba(137,97,217,0.4), transparent)",
+        }}
       />
 
       <div className="shell section-y">
-        {/* Section header */}
+        {/* Header */}
         <div
           style={{
-            opacity: inView ? 1 : 0,
-            transform: inView ? "translateY(0)" : "translateY(24px)",
+            opacity:    inView ? 1 : 0,
+            transform:  inView ? "translateY(0)" : "translateY(24px)",
             transition: "opacity 0.7s ease, transform 0.7s ease",
           }}
         >
@@ -215,20 +196,20 @@ export default function Menu() {
             <h2 className="font-display text-[clamp(2rem,4.5vw,3.4rem)] font-medium leading-[1.04] text-ink">
               Every dish, a character
             </h2>
-            <p className="max-w-xs text-sm text-ink-soft">
-              Character-tagged dishes carry the breathing style of their Hashira
-              or demon. Hover to see it.
+            <p className="max-w-[22rem] text-sm text-ink-soft">
+              Character-tagged dishes carry the breathing style of their
+              Hashira or demon.
             </p>
           </div>
         </div>
 
-        {/* Category tabs — no-scrollbar, app-like */}
+        {/* Category tabs */}
         <div
-          className="no-scrollbar mt-10 flex gap-2 overflow-x-auto pb-px"
+          className="no-scrollbar mt-8 flex gap-2 overflow-x-auto pb-px"
           role="tablist"
           aria-label="Menu categories"
           style={{
-            opacity: inView ? 1 : 0,
+            opacity:    inView ? 1 : 0,
             transition: "opacity 0.7s ease 0.15s",
           }}
         >
@@ -239,10 +220,10 @@ export default function Menu() {
                 key={cat.id}
                 role="tab"
                 aria-selected={isActive}
-                onClick={() => scrollTabIntoView(cat.id)}
+                onClick={() => handleTab(cat.id)}
                 className={`
-                  relative flex shrink-0 items-center gap-2 overflow-hidden rounded-pill border
-                  px-4 py-2.5 text-[0.68rem] uppercase tracking-[0.2em]
+                  relative flex shrink-0 items-center gap-1.5 overflow-hidden rounded-pill border
+                  px-4 py-2 text-[0.65rem] uppercase tracking-[0.2em]
                   transition-all duration-300 focus:outline-none
                   ${isActive
                     ? "border-wisteria/50 text-white"
@@ -252,33 +233,33 @@ export default function Menu() {
                 style={
                   isActive
                     ? {
-                        background: "linear-gradient(135deg, rgba(137,97,217,0.25) 0%, rgba(137,97,217,0.1) 100%)",
-                        boxShadow: "0 0 0 1px rgba(137,97,217,0.3), inset 0 1px 0 rgba(255,255,255,0.06)",
+                        background:
+                          "linear-gradient(135deg, rgba(137,97,217,0.22) 0%, rgba(137,97,217,0.08) 100%)",
+                        boxShadow:
+                          "0 0 0 1px rgba(137,97,217,0.28), inset 0 1px 0 rgba(255,255,255,0.05)",
                       }
                     : {}
                 }
               >
-                {isActive && (
-                  <span
-                    className="pointer-events-none absolute inset-0"
-                    style={{ background: "linear-gradient(180deg, rgba(137,97,217,0.04) 0%, transparent 100%)" }}
-                  />
-                )}
-                <span className="jp text-[0.62rem] opacity-70">{cat.labelJp}</span>
-                <span className="relative z-10">{cat.label}</span>
+                <span className="jp text-[0.58rem] opacity-60">{cat.labelJp}</span>
+                {cat.label}
               </button>
             );
           })}
         </div>
 
-        {/* Grid */}
+        {/* ── Grid: 2 cols on sm+, 3 cols on lg+ ── */}
         <div
-          className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3"
+          className="mt-6 grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3"
           role="tabpanel"
         >
           {filtered.length > 0
-            ? filtered.map((item, i) => <MenuCard key={item.id} item={item} index={i} />)
-            : Array.from({ length: 6 }).map((_, i) => <SkeletonCard key={i} />)}
+            ? filtered.map((item, i) => (
+                <MenuCard key={item.id} item={item} index={i} />
+              ))
+            : Array.from({ length: 9 }).map((_, i) => (
+                <SkeletonRow key={i} />
+              ))}
         </div>
       </div>
     </section>

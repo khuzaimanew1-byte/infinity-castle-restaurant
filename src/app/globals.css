@@ -4,34 +4,36 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ─────────────────────────────────────────
+   CSS VARIABLES
+───────────────────────────────────────── */
 :root {
   --font-playfair: "Playfair Display", Georgia, serif;
   --font-inter: "Inter", system-ui, sans-serif;
   --font-noto-jp: "Noto Serif JP", serif;
 
-  /* Colors as CSS vars for inline usage */
-  --color-void: #0B0906;
-  --color-timber: #130E0B;
-  --color-surface: #1A1410;
-  --color-line: #2A201A;
-  --color-wisteria: #8961D9;
-  --color-flame: #E8753A;
-  --color-lantern: #D4935A;
-  --color-mist: #7EC8D4;
-  --color-water: #4A8FBF;
-  --color-ink: #EDE8E0;
-  --color-ink-soft: #B5ADA0;
+  --color-void:      #0B0906;
+  --color-timber:    #130E0B;
+  --color-surface:   #1A1410;
+  --color-line:      #2A201A;
+  --color-wisteria:  #8961D9;
+  --color-flame:     #E8753A;
+  --color-lantern:   #D4935A;
+  --color-mist:      #7EC8D4;
+  --color-water:     #4A8FBF;
+  --color-ink:       #EDE8E0;
+  --color-ink-soft:  #B5ADA0;
   --color-ink-faint: #6B6259;
-  --color-metal: #7A7068;
+  --color-metal:     #7A7068;
   --color-metal-lit: #A89880;
 }
 
-/* ─── Base ─── */
+/* ─────────────────────────────────────────
+   BASE
+───────────────────────────────────────── */
 *,
 *::before,
-*::after {
-  box-sizing: border-box;
-}
+*::after { box-sizing: border-box; }
 
 html {
   scroll-behavior: smooth;
@@ -48,7 +50,6 @@ body {
   overflow-x: hidden;
 }
 
-/* ─── Typography ─── */
 h1, h2, h3 {
   font-family: var(--font-playfair);
   line-height: 1.1;
@@ -56,23 +57,18 @@ h1, h2, h3 {
   color: var(--color-ink);
 }
 
-.jp {
-  font-family: var(--font-noto-jp);
-}
+.jp { font-family: var(--font-noto-jp); }
 
-/* ─── Scrollbar ─── */
-::-webkit-scrollbar {
-  width: 5px;
-}
-::-webkit-scrollbar-track {
-  background: var(--color-timber);
-}
-::-webkit-scrollbar-thumb {
-  background: var(--color-line);
-  border-radius: 999px;
-}
+/* ─────────────────────────────────────────
+   SCROLLBAR
+───────────────────────────────────────── */
+::-webkit-scrollbar        { width: 5px; }
+::-webkit-scrollbar-track  { background: var(--color-timber); }
+::-webkit-scrollbar-thumb  { background: var(--color-line); border-radius: 999px; }
 
-/* ─── Utility Classes ─── */
+/* ─────────────────────────────────────────
+   LAYOUT UTILITIES
+───────────────────────────────────────── */
 .shell {
   width: 100%;
   max-width: 72rem;
@@ -81,11 +77,16 @@ h1, h2, h3 {
 }
 
 .section-y {
-  padding-top: clamp(4rem, 8vw, 7rem);
+  padding-top:    clamp(4rem, 8vw, 7rem);
   padding-bottom: clamp(4rem, 8vw, 7rem);
 }
 
-/* ─── Glass surfaces ─── */
+.no-scrollbar::-webkit-scrollbar { display: none; }
+.no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+/* ─────────────────────────────────────────
+   GLASS
+───────────────────────────────────────── */
 .glass {
   background: rgba(26, 20, 16, 0.55);
   backdrop-filter: blur(18px) saturate(140%);
@@ -93,7 +94,24 @@ h1, h2, h3 {
   border: 1px solid rgba(255, 255, 255, 0.065);
 }
 
-/* ─── Ember particle ─── */
+/* ─────────────────────────────────────────
+   WISTERIA LATTICE
+───────────────────────────────────────── */
+.wisteria-lattice {
+  background-image:
+    repeating-linear-gradient(
+      0deg, transparent, transparent 60px,
+      rgba(137,97,217,0.04) 60px, rgba(137,97,217,0.04) 61px
+    ),
+    repeating-linear-gradient(
+      90deg, transparent, transparent 60px,
+      rgba(137,97,217,0.04) 60px, rgba(137,97,217,0.04) 61px
+    );
+}
+
+/* ─────────────────────────────────────────
+   EMBER PARTICLE
+───────────────────────────────────────── */
 .ember {
   position: absolute;
   bottom: 0;
@@ -102,57 +120,136 @@ h1, h2, h3 {
   animation: ember-rise var(--duration, 18s) ease-in var(--delay, 0s) infinite;
   background: radial-gradient(
     circle,
-    rgba(255, 228, 186, 1) 0%,
-    rgba(255, 152, 72, 0.75) 45%,
-    rgba(255, 90, 30, 0) 75%
+    rgba(255,228,186,1) 0%,
+    rgba(255,152,72,0.75) 45%,
+    rgba(255,90,30,0) 75%
   );
-  box-shadow: 0 0 8px 2px rgba(255, 150, 70, 0.45);
+  box-shadow: 0 0 8px 2px rgba(255,150,70,0.45);
 }
 
-/* ─── Wisteria lattice overlay ─── */
-.wisteria-lattice {
-  background-image:
-    repeating-linear-gradient(
-      0deg,
-      transparent,
-      transparent 60px,
-      rgba(137, 97, 217, 0.04) 60px,
-      rgba(137, 97, 217, 0.04) 61px
-    ),
-    repeating-linear-gradient(
-      90deg,
-      transparent,
-      transparent 60px,
-      rgba(137, 97, 217, 0.04) 60px,
-      rgba(137, 97, 217, 0.04) 61px
-    );
-}
-
-/* ─── Category tab scrollbar hide ─── */
-.no-scrollbar::-webkit-scrollbar { display: none; }
-.no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
-
-/* ─── Skeleton shimmer ─── */
+/* ─────────────────────────────────────────
+   SKELETON SHIMMER
+───────────────────────────────────────── */
 .skeleton {
   background: linear-gradient(
     90deg,
     var(--color-surface) 0%,
-    rgba(255, 255, 255, 0.04) 50%,
+    rgba(255,255,255,0.04) 50%,
     var(--color-surface) 100%
   );
   background-size: 200% 100%;
   animation: shimmer 2s linear infinite;
 }
 
-/* ─── Breathing style glow (applied via JS class) ─── */
-.glow-flame   { box-shadow: 0 0 24px 2px rgba(232, 117, 58, 0.35), inset 0 0 12px rgba(232, 117, 58, 0.08); }
-.glow-water   { box-shadow: 0 0 24px 2px rgba(74, 143, 191, 0.35), inset 0 0 12px rgba(74, 143, 191, 0.08); }
-.glow-wisteria{ box-shadow: 0 0 24px 2px rgba(137, 97, 217, 0.35), inset 0 0 12px rgba(137, 97, 217, 0.08); }
-.glow-mist    { box-shadow: 0 0 24px 2px rgba(126, 200, 212, 0.35), inset 0 0 12px rgba(126, 200, 212, 0.08); }
-.glow-stone   { box-shadow: 0 0 24px 2px rgba(180, 160, 140, 0.35), inset 0 0 12px rgba(180, 160, 140, 0.08); }
-.glow-wind    { box-shadow: 0 0 24px 2px rgba(160, 220, 180, 0.35), inset 0 0 12px rgba(160, 220, 180, 0.08); }
-.glow-serpent { box-shadow: 0 0 24px 2px rgba(180, 210, 100, 0.35), inset 0 0 12px rgba(180, 210, 100, 0.08); }
-.glow-insect  { box-shadow: 0 0 24px 2px rgba(180, 120, 200, 0.35), inset 0 0 12px rgba(180, 120, 200, 0.08); }
-.glow-sound   { box-shadow: 0 0 24px 2px rgba(220, 180, 80, 0.35), inset 0 0 12px rgba(220, 180, 80, 0.08); }
-.glow-love    { box-shadow: 0 0 24px 2px rgba(230, 100, 140, 0.35), inset 0 0 12px rgba(230, 100, 140, 0.08); }
-.glow-demon   { box-shadow: 0 0 24px 2px rgba(180, 20, 40, 0.5),   inset 0 0 12px rgba(180, 20, 40, 0.12); }
+/* ─────────────────────────────────────────
+   BREATHING STYLE GLOW CLASSES
+───────────────────────────────────────── */
+.glow-flame   { box-shadow: 0 0 24px 2px rgba(232,117,58,0.35),  inset 0 0 12px rgba(232,117,58,0.08); }
+.glow-water   { box-shadow: 0 0 24px 2px rgba(74,143,191,0.35),  inset 0 0 12px rgba(74,143,191,0.08); }
+.glow-wisteria{ box-shadow: 0 0 24px 2px rgba(137,97,217,0.35),  inset 0 0 12px rgba(137,97,217,0.08); }
+.glow-mist    { box-shadow: 0 0 24px 2px rgba(126,200,212,0.35), inset 0 0 12px rgba(126,200,212,0.08); }
+.glow-stone   { box-shadow: 0 0 24px 2px rgba(180,160,140,0.35), inset 0 0 12px rgba(180,160,140,0.08); }
+.glow-wind    { box-shadow: 0 0 24px 2px rgba(160,220,180,0.35), inset 0 0 12px rgba(160,220,180,0.08); }
+.glow-serpent { box-shadow: 0 0 24px 2px rgba(180,210,100,0.35), inset 0 0 12px rgba(180,210,100,0.08); }
+.glow-insect  { box-shadow: 0 0 24px 2px rgba(180,120,200,0.35), inset 0 0 12px rgba(180,120,200,0.08); }
+.glow-sound   { box-shadow: 0 0 24px 2px rgba(220,180,80,0.35),  inset 0 0 12px rgba(220,180,80,0.08); }
+.glow-love    { box-shadow: 0 0 24px 2px rgba(230,100,140,0.35), inset 0 0 12px rgba(230,100,140,0.08); }
+.glow-demon   { box-shadow: 0 0 24px 2px rgba(180,20,40,0.5),    inset 0 0 12px rgba(180,20,40,0.12); }
+
+/* ─────────────────────────────────────────
+   CASTLE GATE — door panels & ink reveal
+───────────────────────────────────────── */
+.gate-panel-left {
+  transform-origin: left center;
+}
+.gate-panel-right {
+  transform-origin: right center;
+}
+/* Wood grain texture overlay using CSS */
+.wood-grain {
+  background-image:
+    repeating-linear-gradient(
+      92deg,
+      transparent 0px, transparent 3px,
+      rgba(0,0,0,0.08) 3px, rgba(0,0,0,0.08) 4px
+    ),
+    repeating-linear-gradient(
+      178deg,
+      transparent 0px, transparent 12px,
+      rgba(255,255,255,0.015) 12px, rgba(255,255,255,0.015) 13px
+    );
+}
+
+/* ─────────────────────────────────────────
+   @KEYFRAMES
+───────────────────────────────────────── */
+
+/* Floating embers */
+@keyframes ember-rise {
+  0%   { transform: translateY(0)    translateX(0);               opacity: 0; }
+  10%  { opacity: 1; }
+  90%  { opacity: 0.6; }
+  100% { transform: translateY(-100vh) translateX(var(--drift,20px)); opacity: 0; }
+}
+
+/* Scroll indicator */
+@keyframes scroll-cue {
+  0%   { transform: translateY(-100%); }
+  100% { transform: translateY(200%); }
+}
+
+/* Skeleton shimmer */
+@keyframes shimmer {
+  0%   { background-position: -200% 0; }
+  100% { background-position:  200% 0; }
+}
+
+/* Generic fade-up */
+@keyframes fade-up {
+  from { opacity: 0; transform: translateY(24px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* Wisteria slow drift */
+@keyframes wisteria-drift {
+  0%, 100% { transform: translateY(0)   rotate(0deg); }
+  33%       { transform: translateY(-6px) rotate(-1deg); }
+  66%       { transform: translateY(4px)  rotate(0.5deg); }
+}
+
+/* Castle gate left panel swings open */
+@keyframes gate-open-left {
+  0%   { transform: perspective(1200px) rotateY(0deg);   opacity: 1; }
+  100% { transform: perspective(1200px) rotateY(-105deg); opacity: 0.3; }
+}
+
+/* Castle gate right panel swings open */
+@keyframes gate-open-right {
+  0%   { transform: perspective(1200px) rotateY(0deg);   opacity: 1; }
+  100% { transform: perspective(1200px) rotateY(105deg);  opacity: 0.3; }
+}
+
+/* Ink seep — vertical fill from top */
+@keyframes ink-seep {
+  0%   { clip-path: inset(0 0 100% 0); opacity: 1; }
+  100% { clip-path: inset(0 0 0%   0); opacity: 1; }
+}
+
+/* Gate screen fade out after open */
+@keyframes gate-screen-exit {
+  0%   { opacity: 1; }
+  100% { opacity: 0; }
+}
+
+/* Pulse glow for enter button */
+@keyframes pulse-glow {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(137,97,217,0); }
+  50%       { box-shadow: 0 0 24px 8px rgba(137,97,217,0.3); }
+}
+
+/* Blade flash sweep on gate */
+@keyframes blade-flash {
+  0%   { opacity: 0; transform: translateX(-120%) skewX(-20deg); }
+  40%  { opacity: 1; }
+  100% { opacity: 0; transform: translateX(220%)  skewX(-20deg); }
+}
