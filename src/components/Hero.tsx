@@ -13,48 +13,86 @@ const EMBERS = Array.from({ length: 20 }, (_, i) => ({
 }));
 
 const STATS = [
-  { jp: "評価", label: "Rated",    value: "4.7 / 5",         icon: "★" },
-  { jp: "場所", label: "Where",    value: "Bahawalpur",       icon: "◎" },
-  { jp: "予算", label: "Per head", value: "Rs 1,000–2,000",  icon: "¥" },
-  { jp: "営業", label: "Open",     value: "10:00 – 23:30",   icon: "⏾" },
+  { jp: "評価", label: "Rated",    value: "4.7 / 5"        },
+  { jp: "場所", label: "Where",    value: "Bahawalpur"      },
+  { jp: "予算", label: "Per head", value: "Rs 1,000–2,000" },
+  { jp: "営業", label: "Open",     value: "10:00 – 23:30"  },
 ];
 
 const WORDS = ["A", "Demon", "Slayer", "themed", "Japanese", "kitchen", "in", "Bahawalpur"];
 
 export default function Hero() {
   const [visible, setVisible] = useState(false);
-  const scrollRef = useRef<HTMLSpanElement>(null);
+  const [mouse, setMouse] = useState({ x: 0, y: 0 });
+  const heroRef = useRef<HTMLElement>(null);
 
   useEffect(() => {
     const t = setTimeout(() => setVisible(true), 80);
     return () => clearTimeout(t);
   }, []);
 
+  /* ── Mouse parallax — track relative position inside hero ── */
+  useEffect(() => {
+    const hero = heroRef.current;
+    if (!hero) return;
+    const handleMove = (e: MouseEvent) => {
+      const rect = hero.getBoundingClientRect();
+      // Normalize -0.5 to 0.5
+      setMouse({
+        x: (e.clientX - rect.left) / rect.width - 0.5,
+        y: (e.clientY - rect.top) / rect.height - 0.5,
+      });
+    };
+    hero.addEventListener("mousemove", handleMove, { passive: true });
+    return () => hero.removeEventListener("mousemove", handleMove);
+  }, []);
+
+  const px = mouse.x;
+  const py = mouse.y;
+
   return (
     <section
       id="top"
+      ref={heroRef}
       className="relative isolate min-h-[100svh] overflow-hidden bg-void"
       aria-label="Hero"
     >
-      {/* ── Deep multi-layer background ── */}
+      {/* ── Deep multi-layer background — parallax layer 1 (slow) ── */}
+      <div
+        aria-hidden="true"
+        className="absolute inset-0 transition-transform duration-[1200ms] ease-out"
+        style={{
+          transform: `translate(${px * -18}px, ${py * -12}px)`,
+          background: [
+            `radial-gradient(ellipse 130% 90% at ${60 + px * 8}% ${40 + py * 8}%, rgba(137,97,217,0.1) 0%, transparent 55%)`,
+            `radial-gradient(ellipse 90% 70% at ${10 + px * 5}% ${80 + py * 5}%, rgba(232,117,58,0.07) 0%, transparent 50%)`,
+          ].join(", "),
+        }}
+      />
+
+      {/* ── Overlay darkening — stays fixed ── */}
       <div
         aria-hidden="true"
         className="absolute inset-0"
         style={{
           background: [
-            "radial-gradient(ellipse 120% 80% at 60% 40%, rgba(137,97,217,0.08) 0%, transparent 55%)",
-            "radial-gradient(ellipse 80% 60% at 10% 80%, rgba(232,117,58,0.06) 0%, transparent 50%)",
-            "linear-gradient(165deg, rgba(11,9,6,0.98) 0%, rgba(11,9,6,0.82) 35%, rgba(11,9,6,0.35) 65%, rgba(11,9,6,0.05) 100%)",
-            "linear-gradient(0deg, rgba(11,9,6,0.97) 0%, rgba(11,9,6,0.55) 18%, transparent 40%)",
-            "linear-gradient(180deg, rgba(11,9,6,0.75) 0%, transparent 22%)",
+            "linear-gradient(165deg, rgba(11,9,6,0.97) 0%, rgba(11,9,6,0.80) 35%, rgba(11,9,6,0.30) 65%, rgba(11,9,6,0.04) 100%)",
+            "linear-gradient(0deg, rgba(11,9,6,0.97) 0%, rgba(11,9,6,0.5) 18%, transparent 40%)",
+            "linear-gradient(180deg, rgba(11,9,6,0.72) 0%, transparent 22%)",
           ].join(", "),
         }}
       />
 
-      {/* ── Wisteria lattice ── */}
-      <div aria-hidden="true" className="wisteria-lattice pointer-events-none absolute inset-0" />
+      {/* ── Wisteria lattice — parallax layer 2 (medium) ── */}
+      <div
+        aria-hidden="true"
+        className="wisteria-lattice pointer-events-none absolute inset-0 transition-transform duration-[900ms] ease-out"
+        style={{
+          transform: `translate(${px * -10}px, ${py * -7}px)`,
+        }}
+      />
 
-      {/* ── Decorative vertical rule lines ── */}
+      {/* ── Vertical rule lines ── */}
       <div aria-hidden="true" className="pointer-events-none absolute inset-0 overflow-hidden opacity-[0.03]">
         {[15, 30, 50, 68, 82].map((pct) => (
           <div
@@ -65,8 +103,14 @@ export default function Hero() {
         ))}
       </div>
 
-      {/* ── Ember particles ── */}
-      <div aria-hidden="true" className="pointer-events-none absolute inset-0 overflow-hidden">
+      {/* ── Ember particles — parallax layer 3 (fast) ── */}
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute inset-0 overflow-hidden transition-transform duration-[600ms] ease-out"
+        style={{
+          transform: `translate(${px * -28}px, ${py * -16}px)`,
+        }}
+      >
         {EMBERS.map((e) => (
           <span
             key={e.id}
@@ -122,16 +166,14 @@ export default function Hero() {
         {/* Headline — staggered words */}
         <h1 className="mt-6 max-w-[22ch] font-display text-[clamp(2.4rem,5.8vw,5.2rem)] font-medium leading-[1.01] tracking-[-0.025em] text-ink">
           {WORDS.map((word, i) => (
-            <span
-              key={i}
-              className="inline-block overflow-hidden"
-            >
+            <span key={i} className="inline-block overflow-hidden">
               <span
                 className="inline-block mr-[0.22em]"
                 style={{
                   opacity: visible ? 1 : 0,
                   transform: visible ? "translateY(0)" : "translateY(48px)",
-                  transition: `opacity 0.75s cubic-bezier(0.22,1,0.36,1) ${0.14 + i * 0.07}s, transform 0.75s cubic-bezier(0.22,1,0.36,1) ${0.14 + i * 0.07}s`,
+                  transition: `opacity 0.75s cubic-bezier(0.22,1,0.36,1) ${0.14 + i * 0.07}s,
+                               transform 0.75s cubic-bezier(0.22,1,0.36,1) ${0.14 + i * 0.07}s`,
                 }}
               >
                 {word}
@@ -195,7 +237,6 @@ export default function Hero() {
             <span className="relative block h-16 w-px overflow-hidden">
               <span className="absolute inset-0 bg-gradient-to-b from-transparent via-ink-faint/30 to-transparent" />
               <span
-                ref={scrollRef}
                 className="absolute inset-x-0 h-6 rounded-full bg-gradient-to-b from-wisteria/70 to-wisteria"
                 style={{ animation: "scroll-cue 2.6s ease-in-out infinite" }}
               />

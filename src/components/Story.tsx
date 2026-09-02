@@ -1,8 +1,9 @@
 "use client";
 import { useRef } from "react";
-import { useInView } from "framer-motion";
+import { useInView, useScroll, useTransform, motion } from "framer-motion";
 import { siteSettings } from "@/data/site";
 
+/* ── Simple fade-up reveal wrapper ───────────────────────────────── */
 function RevealBlock({
   children,
   delay = 0,
@@ -29,13 +30,78 @@ function RevealBlock({
   );
 }
 
+/* ── Scroll-scrubbed quote — each word highlights as you scroll ─── */
+const QUOTE_WORDS =
+  "Every dish is a character. Every order is a story.".split(" ");
+
+function ScrubQuote() {
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  const { scrollYProgress } = useScroll({
+    target: containerRef,
+    offset: ["start 0.85", "end 0.4"],
+  });
+
+  return (
+    <div ref={containerRef}>
+      <blockquote
+        className="font-display text-[clamp(1.4rem,2.4vw,1.9rem)] font-normal italic leading-[1.55]"
+        aria-label="Every dish is a character. Every order is a story."
+      >
+        {QUOTE_WORDS.map((word, i) => {
+          // Each word lights up progressively as scroll advances
+          const start = i / QUOTE_WORDS.length;
+          const end = (i + 1.6) / QUOTE_WORDS.length;
+
+          return (
+            <Word
+              key={i}
+              word={word}
+              progress={scrollYProgress}
+              range={[start, end]}
+            />
+          );
+        })}
+      </blockquote>
+    </div>
+  );
+}
+
+function Word({
+  word,
+  progress,
+  range,
+}: {
+  word: string;
+  progress: ReturnType<typeof useScroll>["scrollYProgress"];
+  range: [number, number];
+}) {
+  const opacity = useTransform(progress, range, [0.18, 1]);
+  const color = useTransform(
+    progress,
+    range,
+    ["var(--color-ink-faint)", "var(--color-ink)"]
+  );
+
+  return (
+    <motion.span
+      className="mr-[0.28em] inline-block"
+      style={{ opacity, color }}
+    >
+      {word}
+    </motion.span>
+  );
+}
+
+/* ── Facts ────────────────────────────────────────────────────────── */
 const facts = [
-  { label: "Opened",    value: siteSettings.openedOn,         jp: "開業" },
-  { label: "Rating",    value: `${siteSettings.rating} / 5`,  jp: "評価" },
-  { label: "Hours",     value: siteSettings.hours.label,      jp: "営業" },
-  { label: "Price",     value: siteSettings.priceRange.label, jp: "予算" },
+  { label: "Opened",  value: siteSettings.openedOn,         jp: "開業" },
+  { label: "Rating",  value: `${siteSettings.rating} / 5`,  jp: "評価" },
+  { label: "Hours",   value: siteSettings.hours.label,      jp: "営業" },
+  { label: "Price",   value: siteSettings.priceRange.label, jp: "予算" },
 ];
 
+/* ── Main ─────────────────────────────────────────────────────────── */
 export default function Story() {
   return (
     <section
@@ -60,7 +126,6 @@ export default function Story() {
             "radial-gradient(50% 50% at 10% 90%, rgba(232,117,58,0.05) 0%, transparent 70%)",
         }}
       />
-
       {/* Vertical decorative rule */}
       <div
         aria-hidden="true"
@@ -73,7 +138,8 @@ export default function Story() {
 
       <div className="shell section-y">
         <div className="grid gap-16 lg:grid-cols-[1.1fr_0.9fr] lg:gap-28">
-          {/* Left — copy */}
+
+          {/* ── Left: copy ─────────────────────────────────────────── */}
           <div>
             <RevealBlock>
               <div className="flex items-center gap-3">
@@ -94,7 +160,8 @@ export default function Story() {
             <RevealBlock delay={0.2}>
               <p className="mt-8 max-w-lg text-[1.05rem] leading-[1.85] text-ink-soft">
                 We opened on{" "}
-                <span className="text-ink">{siteSettings.address.line2}</span> on{" "}
+                <span className="text-ink">{siteSettings.address.line2}</span>{" "}
+                on{" "}
                 <span className="font-medium text-ink">{siteSettings.openedOn}</span>{" "}
                 and built the room first — hanging wisteria, paper lanterns,
                 dark timber, and light kept low enough that the lanterns do the
@@ -129,9 +196,9 @@ export default function Story() {
             </RevealBlock>
           </div>
 
-          {/* Right — quote + facts */}
+          {/* ── Right: scrub quote + facts ─────────────────────────── */}
           <RevealBlock delay={0.15} className="lg:pt-20">
-            {/* Pull quote */}
+            {/* Scroll-scrubbed quote */}
             <figure className="relative pl-6">
               {/* Left accent line */}
               <div
@@ -147,11 +214,12 @@ export default function Story() {
               >
                 &ldquo;
               </span>
-              <blockquote className="font-display text-[clamp(1.4rem,2.4vw,1.9rem)] font-normal italic leading-[1.5] text-ink">
-                Every dish is a character. Every order is a story.
-              </blockquote>
+
+              <ScrubQuote />
+
               <figcaption className="mt-5 text-[0.65rem] uppercase tracking-[0.24em] text-ink-faint">
-                Infinity Castle Dining &nbsp;·&nbsp; Est. {siteSettings.openedOn}
+                Infinity Castle Dining &nbsp;·&nbsp; Est.{" "}
+                {siteSettings.openedOn}
               </figcaption>
             </figure>
 
