@@ -47,6 +47,11 @@ export default function Reservation() {
 
   const activeEvent = eventOptions.find((e) => e.id === form.eventType)!;
 
+  // Dynamic focus: inject accent as CSS var on the form
+  const formAccentStyle = {
+    "--accent": activeEvent.accent,
+  } as React.CSSProperties;
+
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
   ) => {
@@ -132,6 +137,7 @@ export default function Reservation() {
           <form
             onSubmit={handleSubmit}
             className="glass rounded-card border border-line p-6 md:p-8"
+            style={formAccentStyle}
             noValidate
           >
             {/* Event type selector */}
@@ -190,7 +196,7 @@ export default function Reservation() {
                   onChange={handleChange}
                   placeholder="Tanjiro Kamado"
                   required
-                  className="w-full rounded-[0.6rem] border border-line bg-void px-4 py-3 text-sm text-ink placeholder:text-ink-faint focus:border-wisteria/50 focus:outline-none transition-colors"
+                  className="res-input w-full rounded-[0.6rem] border border-line bg-void px-4 py-3 text-sm text-ink placeholder:text-ink-faint"
                 />
               </div>
 
@@ -208,7 +214,7 @@ export default function Reservation() {
                   min="1"
                   max="50"
                   required
-                  className="w-full rounded-[0.6rem] border border-line bg-void px-4 py-3 text-sm text-ink placeholder:text-ink-faint focus:border-wisteria/50 focus:outline-none transition-colors"
+                  className="res-input w-full rounded-[0.6rem] border border-line bg-void px-4 py-3 text-sm text-ink placeholder:text-ink-faint"
                 />
               </div>
 
@@ -224,7 +230,7 @@ export default function Reservation() {
                   onChange={handleChange}
                   min={today}
                   required
-                  className="w-full rounded-[0.6rem] border border-line bg-void px-4 py-3 text-sm text-ink focus:border-wisteria/50 focus:outline-none transition-colors"
+                  className="res-input w-full rounded-[0.6rem] border border-line bg-void px-4 py-3 text-sm text-ink"
                 />
               </div>
 
@@ -239,7 +245,7 @@ export default function Reservation() {
                   value={form.time}
                   onChange={handleChange}
                   required
-                  className="w-full rounded-[0.6rem] border border-line bg-void px-4 py-3 text-sm text-ink focus:border-wisteria/50 focus:outline-none transition-colors"
+                  className="res-input w-full rounded-[0.6rem] border border-line bg-void px-4 py-3 text-sm text-ink"
                 />
               </div>
 
