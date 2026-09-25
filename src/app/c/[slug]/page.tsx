@@ -32,7 +32,9 @@ async function downloadCoupon(opts: {
   const canvas = document.createElement("canvas");
   canvas.width  = W;
   canvas.height = H;
-  const ctx = canvas.getContext("2d")!;
+  const ctx = canvas.getContext("2d");
+  // Guard: canvas context may be unavailable in some environments
+  if (!ctx) return;
 
   // Background gradient
   const grad = ctx.createLinearGradient(0, 0, W, H);
@@ -49,7 +51,7 @@ async function downloadCoupon(opts: {
   ctx.lineWidth   = 1;
   ctx.strokeRect(16, 16, W - 32, H - 32);
 
-  // Perforated divider (right side for QR zone)
+  // Perforated divider
   const QZ = 250;
   ctx.setLineDash([6, 6]);
   ctx.strokeStyle = "rgba(137,97,217,0.35)";
@@ -66,13 +68,12 @@ async function downloadCoupon(opts: {
   ctx.textAlign = "center";
   ctx.fillText("無限城", W / 2 - QZ / 2, H / 2 + 60);
 
-  // Brand name
+  // Brand
   ctx.font      = "24px 'Playfair Display', serif";
   ctx.fillStyle = "rgba(237,232,224,0.9)";
   ctx.textAlign = "left";
   ctx.fillText("INFINITY CASTLE DINING", 40, 72);
 
-  // Tagline
   ctx.font      = "13px sans-serif";
   ctx.fillStyle = "rgba(160,140,100,0.8)";
   ctx.fillText("Exclusive Dining Pass • Bahawalpur", 40, 100);
@@ -85,12 +86,11 @@ async function downloadCoupon(opts: {
   ctx.lineTo(W - QZ - 30, 115);
   ctx.stroke();
 
-  // Discount label
+  // Discount
   ctx.font      = "bold 52px 'Playfair Display', serif";
   ctx.fillStyle = "#D4935A";
   ctx.fillText(fmtDsc(opts.dsc, opts.typ), 40, 195);
 
-  // Sub-label
   ctx.font      = "14px sans-serif";
   ctx.fillStyle = "rgba(160,140,100,0.7)";
   ctx.fillText("Present at cash counter upon dining", 40, 225);
@@ -103,7 +103,7 @@ async function downloadCoupon(opts: {
   ctx.fillStyle = "#EDe8e0";
   ctx.fillText(opts.sec, 40, 328);
 
-  // ID
+  // Coupon ID (first 8 chars)
   ctx.font      = "10px monospace";
   ctx.fillStyle = "rgba(160,140,100,0.5)";
   ctx.fillText(`ID: ${opts.cpnId.slice(0, 8).toUpperCase()}`, 40, 380);
@@ -115,9 +115,9 @@ async function downloadCoupon(opts: {
 
   // QR image
   const qrImg = new Image();
-  await new Promise<void>((res, rej) => {
-    qrImg.onload  = () => res();
-    qrImg.onerror = rej;
+  await new Promise<void>((resolve, reject) => {
+    qrImg.onload  = () => resolve();
+    qrImg.onerror = reject;
     qrImg.src     = opts.qrDataUrl;
   });
   const qrSize = 180;
@@ -134,28 +134,30 @@ async function downloadCoupon(opts: {
   ctx.fillStyle = "rgba(137,97,217,0.6)";
   ctx.fillText("Scan at counter", W - QZ + QZ / 2, qrY + qrSize + 48);
 
-  // Download as PNG
+  // Trigger PNG download
   canvas.toBlob((blob) => {
     if (!blob) return;
     const url = URL.createObjectURL(blob);
     const a   = document.createElement("a");
-    a.href    = url;
+    a.href     = url;
     a.download = `infinity-castle-pass-${opts.sec}.png`;
+    document.body.appendChild(a);
     a.click();
-    URL.revokeObjectURL(url);
+    document.body.removeChild(a);
+    // Small delay before revoke so browser has time to initiate download
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
   }, "image/png");
 }
 
-// ── Sealed talisman visual (unauthenticated state) ────────────────
+// ── Sealed talisman (unauthenticated state) ───────────────────────
 function SealedPass() {
   return (
     <div className="relative flex h-72 w-full max-w-sm items-center justify-center rounded-2xl border border-wisteria/25 bg-gradient-to-b from-timber to-void">
-      {/* Glow */}
       <div className="pointer-events-none absolute inset-0 rounded-2xl" style={{ boxShadow: "inset 0 0 60px rgba(137,97,217,0.12)" }} />
       <div className="flex flex-col items-center gap-3">
         <div
           className="flex h-24 w-24 items-center justify-center rounded-full border-2 border-wisteria/40"
-          style={{ background: "radial-gradient(circle, rgba(137,97,217,0.15), rgba(11,9,6,0.8))", animation: "pulse-glow 2.8s ease-in-out infinite" }}
+          style={{ background: "radial-gradient(circle, rgba(137,97,217,0.15), rgba(11,9,6,0.8))" }}
         >
           <span className="jp select-none text-4xl text-wisteria/70">封</span>
         </div>
@@ -168,34 +170,42 @@ function SealedPass() {
   );
 }
 
-// ── QR + Download ticket ──────────────────────────────────────────
+// ── Unlocked coupon ticket ────────────────────────────────────────
 function UnlockedPass({ data }: { data: CouponData }) {
   const [qrUrl, setQrUrl] = useState("");
 
-  const verifyUrl = `${window.location.origin}/v/${data.sec}`;
+  // verifyUrl is stable per coupon — built once and used as QR content
+  const verifyUrl = typeof window !== "undefined"
+    ? `${window.location.origin}/v/${data.sec}`
+    : `/v/${data.sec}`;
 
   useEffect(() => {
     QRCode.toDataURL(verifyUrl, {
-      width:            220,
-      margin:           1,
-      color: { dark: "#EDe8e0", light: "#0B0906" },
+      width:               220,
+      margin:              1,
+      color:               { dark: "#EDe8e0", light: "#0B0906" },
       errorCorrectionLevel: "H",
-    }).then(setQrUrl);
+    }).then(setQrUrl).catch(console.error);
   }, [verifyUrl]);
 
   const handleDownload = useCallback(async () => {
     if (!qrUrl) return;
-    await downloadCoupon({ qrDataUrl: qrUrl, dsc: data.dsc, typ: data.typ, sec: data.sec, cpnId: data.cpnId });
+    await downloadCoupon({
+      qrDataUrl: qrUrl,
+      dsc:       data.dsc,
+      typ:       data.typ,
+      sec:       data.sec,
+      cpnId:     data.cpnId,
+    });
   }, [qrUrl, data]);
 
-  const color = STS_COLOR[data.sts];
+  const color = STS_COLOR[data.sts] ?? "#8961D9";
 
   return (
     <div
       className="relative flex w-full max-w-xl overflow-hidden rounded-2xl border"
       style={{ borderColor: `${color}35`, background: "linear-gradient(135deg, #0F0C08, #1A1208)" }}
     >
-      {/* Wisteria border glow */}
       <div className="pointer-events-none absolute inset-0 rounded-2xl" style={{ boxShadow: `inset 0 0 80px ${color}12` }} />
       <div className="absolute inset-x-0 top-0 h-[2px]" style={{ background: `linear-gradient(90deg, transparent, ${color}80, transparent)` }} />
 
@@ -215,7 +225,7 @@ function UnlockedPass({ data }: { data: CouponData }) {
         </div>
       </div>
 
-      {/* Perforation */}
+      {/* Perforation dots */}
       <div className="flex flex-col items-center justify-between py-4">
         {Array.from({ length: 12 }).map((_, i) => (
           <div key={i} className="h-2 w-2 rounded-full bg-void" />
@@ -226,7 +236,7 @@ function UnlockedPass({ data }: { data: CouponData }) {
       <div className="flex w-52 flex-col items-center justify-center gap-4 p-6">
         {qrUrl ? (
           // eslint-disable-next-line @next/next/no-img-element
-          <img src={qrUrl} alt="Coupon QR" className="h-36 w-36 rounded-lg" />
+          <img src={qrUrl} alt="Coupon QR code — scan at billing counter" className="h-36 w-36 rounded-lg" />
         ) : (
           <div className="h-36 w-36 animate-pulse rounded-lg bg-wisteria/10" />
         )}
@@ -234,10 +244,11 @@ function UnlockedPass({ data }: { data: CouponData }) {
         <p className="text-[0.58rem] text-ink-faint/50">Scan at counter</p>
       </div>
 
-      {/* Download btn */}
+      {/* Download button */}
       <button
         onClick={handleDownload}
-        className="absolute bottom-5 right-5 flex items-center gap-2 rounded-full border border-wisteria/30 bg-wisteria/10 px-4 py-2 text-[0.65rem] uppercase tracking-widest text-wisteria transition-all hover:bg-wisteria/20"
+        disabled={!qrUrl}
+        className="absolute bottom-5 right-5 flex items-center gap-2 rounded-full border border-wisteria/30 bg-wisteria/10 px-4 py-2 text-[0.65rem] uppercase tracking-widest text-wisteria transition-all hover:bg-wisteria/20 disabled:opacity-40"
       >
         ↓ Download Pass
       </button>
@@ -245,61 +256,83 @@ function UnlockedPass({ data }: { data: CouponData }) {
   );
 }
 
-// ── Main Page ─────────────────────────────────────────────────────
+// ── Main Claim Page ───────────────────────────────────────────────
 export default function ClaimPage() {
   const { slug } = useParams<{ slug: string }>();
-  const [link,    setLink]    = useState<LinkInfo | null>(null);
-  const [coupon,  setCoupon]  = useState<CouponData | null>(null);
-  const [loading, setLoading] = useState(true);
+
+  const [link,     setLink]     = useState<LinkInfo | null>(null);
+  const [coupon,   setCoupon]   = useState<CouponData | null>(null);
+  const [loading,  setLoading]  = useState(true);
   const [claiming, setClaiming] = useState(false);
-  const [msg,     setMsg]     = useState("");
-  const [session, setSession] = useState<{ id?: string; name?: string } | null>(null);
+  const [msg,      setMsg]      = useState("");
+  // Track whether user is logged in (true/false/null = unknown)
+  const [loggedIn, setLoggedIn] = useState<boolean | null>(null);
 
-  // Check session
+  // Step 1: Check auth session ONCE on mount
+  // Fix: Previously `session` object was a dependency of the link-fetch useEffect,
+  // which caused an infinite loop: session fetch → set session state → re-run link
+  // fetch → re-set link state → re-run session fetch... etc.
+  // Now session check is a separate, isolated effect with no state dependencies.
   useEffect(() => {
-    fetch("/api/auth/session").then(r => r.json()).then(s => {
-      setSession(s?.user ?? null);
-    });
-  }, []);
+    fetch("/api/auth/session")
+      .then(r => r.json())
+      .then(s => setLoggedIn(!!s?.user?.id))
+      .catch(() => setLoggedIn(false));
+  }, []); // empty deps — runs exactly once on mount
 
-  // Resolve link + existing coupon
+  // Step 2: Fetch link + coupon state when slug is ready OR after login changes
+  // loggedIn is used as a dep so coupon data refreshes after the user signs in.
   useEffect(() => {
-    if (!slug) return;
+    if (!slug || loggedIn === null) return; // wait until auth is resolved
+    setLoading(true);
     fetch(`/api/claim/${slug}`)
       .then(r => r.json())
       .then((data) => {
+        if (data.error) {
+          setLink(null);
+          return;
+        }
         setLink({ lid: data.lid, nam: data.nam, claimed: data.claimed, sameLid: data.sameLid });
         if (data.claimed) {
-          setCoupon({ cpnId: data.cpnId, sec: data.sec, dsc: data.dsc, typ: data.typ, sts: data.sts });
+          setCoupon({ cpnId: data.cpnId, sec: data.sec, dsc: Number(data.dsc), typ: data.typ, sts: data.sts });
           if (!data.sameLid) {
             setMsg("Special reward already claimed! Your pass is active below.");
           }
         }
       })
+      .catch(() => setLink(null))
       .finally(() => setLoading(false));
-  }, [slug, session]);
+  }, [slug, loggedIn]); // loggedIn changes after Google auth redirect
 
   const handleLogin = () => {
-    // Redirect to Google sign-in, return to same page
     window.location.href = `/api/auth/signin/google?callbackUrl=${encodeURIComponent(window.location.href)}`;
   };
 
   const handleClaim = async () => {
-    if (!session?.id || claiming) return;
+    if (!loggedIn || claiming) return;
     setClaiming(true);
-    const res = await fetch(`/api/claim/${slug}`, { method: "POST" });
-    const data = await res.json();
-    if (res.ok) {
-      setCoupon({ cpnId: data.cpnId, sec: data.sec, dsc: data.dsc, typ: data.typ, sts: "A" });
-    } else if (data.error === "already_claimed") {
-      setMsg("Special reward already claimed! Your pass is active below.");
-      // Reload to fetch existing coupon
-      window.location.reload();
+    try {
+      const res  = await fetch(`/api/claim/${slug}`, { method: "POST" });
+      const data = await res.json();
+      if (res.ok) {
+        setCoupon({ cpnId: data.cpnId, sec: data.sec, dsc: Number(data.dsc), typ: data.typ, sts: "A" });
+      } else if (data.error === "already_claimed") {
+        setMsg("Special reward already claimed! Your pass is active below.");
+        // Re-fetch to load existing coupon data
+        setLoggedIn(prev => prev); // trigger link fetch effect
+        window.location.reload();
+      } else {
+        setMsg(data.error ?? "Something went wrong. Try again.");
+      }
+    } catch {
+      setMsg("Network error. Please try again.");
+    } finally {
+      setClaiming(false);
     }
-    setClaiming(false);
   };
 
-  if (loading) {
+  // Loading: auth check not resolved yet or link fetching
+  if (loading || loggedIn === null) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-void">
         <div className="h-8 w-8 animate-spin rounded-full border-2 border-wisteria border-t-transparent" />
@@ -309,7 +342,7 @@ export default function ClaimPage() {
 
   if (!link) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-void">
+      <div className="flex min-h-screen flex-col items-center justify-center gap-4 bg-void">
         <p className="text-ink-faint">Invalid or expired link.</p>
       </div>
     );
@@ -334,7 +367,7 @@ export default function ClaimPage() {
           )}
         </div>
 
-        {/* Psychological message for cross-promoter duplicate */}
+        {/* Psychological duplicate-claim message */}
         {msg && (
           <div className="w-full rounded-xl border border-wisteria/25 bg-wisteria/8 px-5 py-3 text-center">
             <p className="text-sm text-ink">{msg}</p>
@@ -344,14 +377,14 @@ export default function ClaimPage() {
         {/* Main coupon area */}
         {coupon ? (
           <UnlockedPass data={coupon} />
-        ) : !session ? (
+        ) : !loggedIn ? (
           <div className="flex flex-col items-center gap-6">
             <SealedPass />
             <button
               onClick={handleLogin}
               className="flex items-center gap-3 rounded-full border border-wisteria/40 bg-wisteria/10 px-8 py-3.5 text-sm text-ink transition-all hover:bg-wisteria/20"
             >
-              <svg className="h-5 w-5" viewBox="0 0 24 24" fill="currentColor">
+              <svg className="h-5 w-5" viewBox="0 0 24 24">
                 <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
                 <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
                 <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/>

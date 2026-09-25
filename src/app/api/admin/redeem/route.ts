@@ -1,53 +1,86 @@
 /**
  * PATCH /api/admin/redeem
- * Admin-only: scan QR/dial code, settle bill, record commission.
- * Body: { sec, bil, com }
- * Business rules:
- *  - bil must be >= cpn.dsc (negative bill guard)
- *  - Coupon must be in status 'A' (Active)
- *  - Increments lnk.com with promoter commission
+ * Admin-only: settle bill, deduct discount, record promoter commission.
+ * Body: { sec: string, bil: number, com: number }
+ *
+ * Business rules enforced server-side:
+ *  - Coupon must be status 'A' (Active)
+ *  - For Fixed discount: bil must be >= dsc
+ *  - For Percentage discount: any positive bill is valid (discount is a %)
+ *  - bil must be a positive number
+ *  - com must be >= 0
  */
 import { NextRequest, NextResponse } from "next/server";
 import { cDb } from "@/lib/db";
 import { calcNet } from "@/lib/constants";
 import type { DscType } from "@/lib/constants";
 
-// Simple admin key check — replace with proper JWT/session in production
 const ADMIN_KEY = process.env.ADMIN_SECRET_KEY;
 
 export async function PATCH(req: NextRequest) {
+  // Auth guard — server-side only, ADMIN_SECRET_KEY never exposed to client
   const key = req.headers.get("x-admin-key");
   if (!ADMIN_KEY || key !== ADMIN_KEY) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const { sec, bil, com }: { sec: string; bil: number; com: number } = await req.json();
-
-  if (!sec || bil == null || com == null) {
-    return NextResponse.json({ error: "Missing fields: sec, bil, com" }, { status: 400 });
+  let body: { sec?: string; bil?: number; com?: number };
+  try {
+    body = await req.json();
+  } catch {
+    return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
   }
 
-  // Fetch coupon
-  const [cpn] = await cDb`
-    SELECT cid, lid, dsc, typ, sts FROM cpn WHERE sec = ${sec} LIMIT 1
-  `;
-  if (!cpn)              return NextResponse.json({ error: "Coupon not found" }, { status: 404 });
-  if (cpn.sts !== "A")  return NextResponse.json({ error: "Coupon not active", sts: cpn.sts }, { status: 409 });
+  const { sec, bil, com } = body;
 
-  // Negative bill guard
-  const net = calcNet(bil, Number(cpn.dsc), cpn.typ as DscType);
-  if (bil < Number(cpn.dsc) && cpn.typ === "F") {
-    return NextResponse.json({ error: "Bill less than discount" }, { status: 422 });
+  // Input validation
+  if (!sec || typeof sec !== "string" || sec.length !== 4) {
+    return NextResponse.json({ error: "Invalid sec code" }, { status: 400 });
+  }
+  if (bil == null || typeof bil !== "number" || bil <= 0) {
+    return NextResponse.json({ error: "bil must be a positive number" }, { status: 400 });
+  }
+  if (com == null || typeof com !== "number" || com < 0) {
+    return NextResponse.json({ error: "com must be >= 0" }, { status: 400 });
   }
 
-  // Redeem coupon
-  await cDb`
-    UPDATE cpn SET sts = 'R', bil = ${bil}, com = ${com}, rdt = NOW()
-    WHERE cid = ${cpn.cid}
-  `;
+  try {
+    const [cpn] = await cDb`
+      SELECT cid, lid, dsc, typ, sts FROM cpn WHERE sec = ${sec} LIMIT 1
+    `;
+    if (!cpn) return NextResponse.json({ error: "Coupon not found" }, { status: 404 });
+    if (cpn.sts !== "A") {
+      return NextResponse.json(
+        { error: cpn.sts === "R" ? "Already redeemed" : "Coupon expired", sts: cpn.sts },
+        { status: 409 }
+      );
+    }
 
-  // Credit promoter commission
-  await cDb`UPDATE lnk SET com = com + ${com} WHERE lid = ${cpn.lid}`;
+    const dsc = Number(cpn.dsc);
+    const typ = cpn.typ as DscType;
 
-  return NextResponse.json({ ok: true, net, dsc: cpn.dsc, typ: cpn.typ });
+    // Negative bill guard:
+    // Fixed: bill must be >= discount amount (can't pay less than 0)
+    // Percentage: always valid for positive bill (worst case 100% off = 0)
+    if (typ === "F" && bil < dsc) {
+      return NextResponse.json(
+        { error: `Bill (Rs ${bil}) is less than fixed discount (Rs ${dsc})` },
+        { status: 422 }
+      );
+    }
+
+    const net = calcNet(bil, dsc, typ);
+
+    // Redeem atomically
+    await cDb`
+      UPDATE cpn SET sts = 'R', bil = ${bil}, com = ${com}, rdt = NOW()
+      WHERE cid = ${cpn.cid}
+    `;
+    await cDb`UPDATE lnk SET com = com + ${com} WHERE lid = ${cpn.lid}`;
+
+    return NextResponse.json({ ok: true, net, dsc, typ });
+  } catch (err) {
+    console.error("[PATCH /api/admin/redeem]", err);
+    return NextResponse.json({ error: "Server error" }, { status: 500 });
+  }
 }
