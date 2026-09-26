@@ -87,7 +87,22 @@ export default function Reservation() {
       "_blank",
       "noreferrer noopener"
     );
+    // Fire-and-forget: persist reservation to DB for admin inbox.
+    // Non-blocking — WhatsApp is always primary; API failure is silent to user.
+    fetch("/api/reservations", {
+      method:  "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        nam: form.name,
+        pax: Number(form.guestCount),
+        dat: form.date,
+        tim: form.time,
+        evt: form.eventType === "custom" ? (form.customEvent || "custom") : form.eventType,
+        msg: form.description || undefined,
+      }),
+    }).catch(() => {}); // silent on failure
   };
+
 
   const today = new Date().toISOString().split("T")[0];
 

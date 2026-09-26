@@ -50,6 +50,34 @@ CREATE INDEX IF NOT EXISTS cpn_sec_idx ON cpn (sec);
 CREATE INDEX IF NOT EXISTS cpn_lid_idx ON cpn (lid);
 CREATE INDEX IF NOT EXISTS cpn_sts_idx ON cpn (sts);
 
+-- rsv: Table reservations from the home page Reservation form
+-- Stored alongside coupons in Coupon DB (no auth required to submit)
+-- sts: P = Pending | C = Confirmed | X = Cancelled
+CREATE TABLE IF NOT EXISTS rsv (
+  rid  TEXT        PRIMARY KEY DEFAULT gen_random_uuid()::TEXT,
+  nam  TEXT        NOT NULL,                  -- guest name
+  pax  SMALLINT    NOT NULL CHECK (pax >= 1 AND pax <= 50),  -- guest count
+  dat  DATE        NOT NULL,                  -- reservation date
+  tim  TIME        NOT NULL,                  -- reservation time
+  evt  TEXT        NOT NULL DEFAULT 'casual', -- event type id
+  msg  TEXT,                                  -- optional description/note
+  sts  CHAR(1)     NOT NULL DEFAULT 'P' CHECK (sts IN ('P','C','X')),
+  crt  TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS rsv_dat_idx ON rsv (dat);
+CREATE INDEX IF NOT EXISTS rsv_sts_idx ON rsv (sts);
+
+-- mnu: Admin overrides for menu items (only changed rows stored)
+-- Static defaults live in src/data/menu.ts — DB only stores diffs
+CREATE TABLE IF NOT EXISTS mnu (
+  mid  TEXT          PRIMARY KEY,              -- matches MenuItem.id in menu.ts
+  nam  TEXT          NOT NULL,                 -- overridden name
+  prc  NUMERIC(8,2)  NOT NULL,                 -- overridden price
+  sig  BOOLEAN       NOT NULL DEFAULT FALSE,   -- signature flag
+  upd  TIMESTAMPTZ   NOT NULL DEFAULT NOW()    -- last updated
+);
+
 -- ──────────────────────────────────────────────────────────────
 -- USER DATABASE
 -- ──────────────────────────────────────────────────────────────
