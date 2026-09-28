@@ -13,9 +13,9 @@ import { cDb } from "@/lib/db";
 
 export async function GET(
   _req: NextRequest,
-  { params }: { params: { sec: string } }
+  { params }: { params: Promise<{ sec: string }> }
 ) {
-  const { sec } = params;
+  const { sec } = await params;
   if (!sec || sec.length !== 4) {
     return NextResponse.json({ valid: false }, { status: 400 });
   }

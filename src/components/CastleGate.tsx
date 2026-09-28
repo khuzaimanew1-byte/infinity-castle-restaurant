@@ -109,6 +109,7 @@ function GateKanji() {
 export default function CastleGate({ onEntered }: { onEntered: () => void }) {
   const [phase, setPhase] = useState<"idle" | "opening" | "done">("idle");
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     const audio = new Audio(
@@ -117,14 +118,23 @@ export default function CastleGate({ onEntered }: { onEntered: () => void }) {
     audio.preload = "auto";
     audio.volume = 0.65;
     audioRef.current = audio;
-    return () => { audio.pause(); };
+    return () => {
+      // Why: audio.pause() alone keeps the network connection + decoded buffer alive.
+      // Setting src="" releases both the network resource and the decoded audio data.
+      audio.pause();
+      audio.src = "";
+      audioRef.current = null;
+      // Cancel any pending gate-close timer to prevent setState on unmounted component
+      if (timerRef.current) clearTimeout(timerRef.current);
+    };
   }, []);
 
   const handleEnter = () => {
     if (phase !== "idle") return;
     try { audioRef.current?.play().catch(() => {}); } catch {}
     setPhase("opening");
-    setTimeout(() => { setPhase("done"); onEntered(); }, 2600);
+    // Why: store timeout ID so it can be cancelled if component unmounts within 2600ms
+    timerRef.current = setTimeout(() => { setPhase("done"); onEntered(); }, 2600);
   };
 
   if (phase === "done") return null;

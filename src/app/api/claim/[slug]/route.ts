@@ -18,9 +18,9 @@ import { genUniqueCode } from "@/lib/codes";
 // ── GET — resolve link + check session coupon state ───────────────
 export async function GET(
   _req: NextRequest,
-  { params }: { params: { slug: string } }
+  { params }: { params: Promise<{ slug: string }> }
 ) {
-  const { slug } = params;
+  const { slug } = await params;
   if (!slug) return NextResponse.json({ error: "Missing slug" }, { status: 400 });
 
   try {
@@ -71,7 +71,7 @@ export async function GET(
 // ── POST — issue coupon to authenticated user ─────────────────────
 export async function POST(
   _req: NextRequest,
-  { params }: { params: { slug: string } }
+  { params }: { params: Promise<{ slug: string }> }
 ) {
   const session = await auth();
   if (!session?.user?.id) {
@@ -79,7 +79,7 @@ export async function POST(
   }
 
   const uid = session.user.id;
-  const { slug } = params;
+  const { slug } = await params;
 
   try {
     // Resolve link — fetch dsc + typ so coupon inherits them

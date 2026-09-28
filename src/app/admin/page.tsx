@@ -173,17 +173,31 @@ function PromoterDashboard({ adminKey }: { adminKey: string }) {
   const [newTyp, setNewTyp] = useState<"F" | "P">("F");
   const [creating, setCreating] = useState(false);
 
+  const abortRef = useRef<AbortController | null>(null);
+
   const load = useCallback(async () => {
+    // Why: abort any previous in-flight request before starting a new one
+    abortRef.current?.abort();
+    const ctrl = new AbortController();
+    abortRef.current = ctrl;
     setLoading(true); setError("");
     try {
-      const res = await fetch("/api/admin/links", { headers: { "x-admin-key": adminKey } });
+      const res = await fetch("/api/admin/links", {
+        headers: { "x-admin-key": adminKey },
+        signal: ctrl.signal,
+      });
       if (!res.ok) { setError("Failed to load links."); return; }
       setLinks(await res.json());
-    } catch { setError("Network error."); }
-    finally { setLoading(false); }
+    } catch (e) {
+      if ((e as Error).name !== "AbortError") setError("Network error.");
+    } finally { setLoading(false); }
   }, [adminKey]);
 
-  useEffect(() => { load(); }, [load]);
+  useEffect(() => {
+    load();
+    // Why: abort in-flight request if tab switches away (component unmounts)
+    return () => { abortRef.current?.abort(); };
+  }, [load]);
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -258,18 +272,30 @@ function ReservationsInbox({ adminKey }: { adminKey: string }) {
   const [filter, setFilter]    = useState<"" | "P" | "C" | "X">("");
   const [error, setError]      = useState("");
 
+  const abortRef = useRef<AbortController | null>(null);
+
   const load = useCallback(async () => {
+    abortRef.current?.abort();
+    const ctrl = new AbortController();
+    abortRef.current = ctrl;
     setLoading(true); setError("");
     try {
       const qs  = filter ? `?sts=${filter}` : "";
-      const res = await fetch(`/api/admin/reservations${qs}`, { headers: { "x-admin-key": adminKey } });
+      const res = await fetch(`/api/admin/reservations${qs}`, {
+        headers: { "x-admin-key": adminKey },
+        signal: ctrl.signal,
+      });
       if (!res.ok) { setError("Failed to load."); return; }
       setReservations(await res.json());
-    } catch { setError("Network error."); }
-    finally { setLoading(false); }
+    } catch (e) {
+      if ((e as Error).name !== "AbortError") setError("Network error.");
+    } finally { setLoading(false); }
   }, [adminKey, filter]);
 
-  useEffect(() => { load(); }, [load]);
+  useEffect(() => {
+    load();
+    return () => { abortRef.current?.abort(); };
+  }, [load]);
 
   const updateStatus = async (rid: string, sts: "C" | "X" | "P") => {
     try {
@@ -362,21 +388,40 @@ function MenuEditor({ adminKey }: { adminKey: string }) {
   const [editSig, setEditSig]       = useState(false);
   const [saving, setSaving]         = useState(false);
   const [savedId, setSavedId]       = useState<string | null>(null);
+  const abortRef  = useRef<AbortController | null>(null);
+  const savedTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  // Why: load() does NOT need activecat as a dep — it fetches ALL items once.
+  // activecat is only used for UI filtering (visible = items.filter(...)).
+  // Having activecat in the dep caused load() to re-fetch on every tab click.
   const load = useCallback(async () => {
+    abortRef.current?.abort();
+    const ctrl = new AbortController();
+    abortRef.current = ctrl;
     setLoading(true);
     try {
-      const res  = await fetch("/api/admin/menu", { headers: { "x-admin-key": adminKey } });
+      const res  = await fetch("/api/admin/menu", {
+        headers: { "x-admin-key": adminKey },
+        signal: ctrl.signal,
+      });
       if (!res.ok) return;
       const data = await res.json();
       setCategories(data.categories ?? []);
       setItems(data.items ?? []);
-      if (data.categories?.length > 0 && !activecat) setActivecat(data.categories[0].id);
+      // Set first category only if none is active yet — read current activecat via state updater
+      setActivecat(prev => (prev || (data.categories?.[0]?.id ?? "")));
     } catch { /* silent */ }
     finally { setLoading(false); }
-  }, [adminKey, activecat]);
+  }, [adminKey]); // activecat removed — not needed here
 
-  useEffect(() => { load(); }, [load]);
+  useEffect(() => {
+    load();
+    return () => {
+      abortRef.current?.abort();
+      // Why: clear saved-indicator timer on unmount to prevent setState after tab switch
+      if (savedTimer.current) clearTimeout(savedTimer.current);
+    };
+  }, [load]);
 
   const startEdit = (item: MenuItem) => {
     setEditing(item.id);
@@ -402,7 +447,9 @@ function MenuEditor({ adminKey }: { adminKey: string }) {
           : i
         ));
         setSavedId(id);
-        setTimeout(() => setSavedId(null), 2000);
+        // Why: store timeout ID so it can be cancelled if component unmounts within 2s
+        if (savedTimer.current) clearTimeout(savedTimer.current);
+        savedTimer.current = setTimeout(() => setSavedId(null), 2000);
         setEditing(null);
       }
     } catch { /* silent */ }

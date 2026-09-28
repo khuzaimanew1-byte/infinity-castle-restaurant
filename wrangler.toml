@@ -1,0 +1,29 @@
+# Infinity Castle Dining — Cloudflare Workers deployment config
+# Adapter: @opennextjs/cloudflare (v1.20.6+)
+# Framework: Next.js 15.5.26 App Router SSR
+
+name = "infinity-castle-dining"
+main = ".open-next/worker.js"
+compatibility_date = "2024-09-23"
+compatibility_flags = ["nodejs_compat"]
+
+# Assets output directory produced by @opennextjs/cloudflare build
+assets = { directory = ".open-next/assets", binding = "ASSETS" }
+
+# ── Observe / Analytics (optional — enable in dashboard) ─────────
+# [observability]
+# enabled = true
+
+# ── Public vars (safe to commit) ─────────────────────────────────
+[vars]
+NEXT_PUBLIC_SITE_URL = "https://infinitycastledining.com"
+
+# ── Secret env vars — DO NOT add here, set in Cloudflare dashboard ──
+# Required secrets in Cloudflare Pages → Settings → Environment Variables:
+#   COUPON_DATABASE_URL         (Neon Coupon DB connection string)
+#   USER_AUTH_DATABASE_URL      (Neon User Auth DB connection string)
+#   GOOGLE_CLIENT_ID            (Google Cloud Console OAuth Client ID)
+#   GOOGLE_CLIENT_SECRET        (Google Cloud Console OAuth Client Secret)
+#   NEXTAUTH_SECRET             (32+ random chars — run: openssl rand -base64 32)
+#   NEXTAUTH_URL                (https://infinitycastledining.com)
+#   ADMIN_SECRET_KEY            (Your chosen admin portal password)

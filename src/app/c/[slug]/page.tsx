@@ -180,12 +180,17 @@ function UnlockedPass({ data }: { data: CouponData }) {
     : `/v/${data.sec}`;
 
   useEffect(() => {
+    let isMounted = true;
     QRCode.toDataURL(verifyUrl, {
       width:               220,
       margin:              1,
       color:               { dark: "#EDe8e0", light: "#0B0906" },
       errorCorrectionLevel: "H",
-    }).then(setQrUrl).catch(console.error);
+    })
+      .then(url => { if (isMounted) setQrUrl(url); })
+      .catch(console.error);
+    // Why: qrcode has no abort API — isMounted prevents setState after unmount
+    return () => { isMounted = false; };
   }, [verifyUrl]);
 
   const handleDownload = useCallback(async () => {
@@ -269,39 +274,35 @@ export default function ClaimPage() {
   const [loggedIn, setLoggedIn] = useState<boolean | null>(null);
 
   // Step 1: Check auth session ONCE on mount
-  // Fix: Previously `session` object was a dependency of the link-fetch useEffect,
-  // which caused an infinite loop: session fetch → set session state → re-run link
-  // fetch → re-set link state → re-run session fetch... etc.
-  // Now session check is a separate, isolated effect with no state dependencies.
   useEffect(() => {
-    fetch("/api/auth/session")
+    const ctrl = new AbortController();
+    fetch("/api/auth/session", { signal: ctrl.signal })
       .then(r => r.json())
       .then(s => setLoggedIn(!!s?.user?.id))
-      .catch(() => setLoggedIn(false));
+      .catch(e => { if (e.name !== "AbortError") setLoggedIn(false); });
+    // Why: AbortController prevents setLoggedIn firing after unmount/navigation
+    return () => ctrl.abort();
   }, []); // empty deps — runs exactly once on mount
 
-  // Step 2: Fetch link + coupon state when slug is ready OR after login changes
-  // loggedIn is used as a dep so coupon data refreshes after the user signs in.
+  // Step 2: Fetch link + coupon state after auth resolves or login changes
   useEffect(() => {
-    if (!slug || loggedIn === null) return; // wait until auth is resolved
+    if (!slug || loggedIn === null) return;
+    const ctrl = new AbortController();
     setLoading(true);
-    fetch(`/api/claim/${slug}`)
+    fetch(`/api/claim/${slug}`, { signal: ctrl.signal })
       .then(r => r.json())
       .then((data) => {
-        if (data.error) {
-          setLink(null);
-          return;
-        }
+        if (data.error) { setLink(null); return; }
         setLink({ lid: data.lid, nam: data.nam, claimed: data.claimed, sameLid: data.sameLid });
         if (data.claimed) {
           setCoupon({ cpnId: data.cpnId, sec: data.sec, dsc: Number(data.dsc), typ: data.typ, sts: data.sts });
-          if (!data.sameLid) {
-            setMsg("Special reward already claimed! Your pass is active below.");
-          }
+          if (!data.sameLid) setMsg("Special reward already claimed! Your pass is active below.");
         }
       })
-      .catch(() => setLink(null))
+      .catch(e => { if (e.name !== "AbortError") setLink(null); })
       .finally(() => setLoading(false));
+    // Why: AbortController cancels in-flight fetch if user navigates away
+    return () => ctrl.abort();
   }, [slug, loggedIn]); // loggedIn changes after Google auth redirect
 
   const handleLogin = () => {

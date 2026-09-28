@@ -8,10 +8,13 @@ export default function VerifyPage() {
 
   useEffect(() => {
     if (!sec) { setStatus("invalid"); return; }
-    fetch(`/api/verify/${sec}`)
+    const ctrl = new AbortController();
+    fetch(`/api/verify/${sec}`, { signal: ctrl.signal })
       .then(r => r.json())
       .then(d => setStatus(d.valid ? "valid" : "invalid"))
-      .catch(() => setStatus("invalid"));
+      .catch(e => { if (e.name !== "AbortError") setStatus("invalid"); });
+    // Why: AbortController prevents setStatus after unmount (e.g. fast navigation)
+    return () => ctrl.abort();
   }, [sec]);
 
   return (
